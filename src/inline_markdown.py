@@ -64,40 +64,25 @@ def split_nodes_image(old_nodes):
             continue
         images = extract_markdown_images(old_node.text)
 
-        sub_nodes = []
-
-        if len(images) == 1:
-            image_alt, image_link = images[0]
-            split_node = old_node.text.split(f"![{image_alt}]({image_link})", 1)
-            for i in range(len(split_node)):
-                if split_node[i] == "":
-                    continue
-                if i % 2 == 0:
-                    sub_nodes.append(TextNode(split_node[i], TextType.TEXT))
-                else:
-                    sub_nodes.append(TextNode(image_alt, TextType.IMAGE, image_link))
-                    sub_nodes.append(TextNode(split_node[i], TextType.TEXT))
-            new_nodes.extend(sub_nodes)
+        if len(images) == 0:
+            new_nodes.append(old_node)
             continue
 
         temp_node = old_node.text
-        for link in images:
-            image_alt, image_link = link
+        for image in images:
+            image_alt, image_link = image
             split_node = temp_node.split(f"![{image_alt}]({image_link})", 1)
 
-            if split_node[0] == "":
-                temp_node = split_node[1]
-                sub_nodes.append(TextNode(image_alt, TextType.IMAGE, image_link))
-                continue
-
-            sub_nodes.append(TextNode(split_node[0], TextType.TEXT))
-            sub_nodes.append(TextNode(image_alt, TextType.IMAGE, image_link))
+            if len(split_node) != 2:
+                raise ValueError("invalid markdown")
+            if split_node[0] != "":
+                new_nodes.append(TextNode(split_node[0], TextType.TEXT))
+            new_nodes.append(TextNode(image_alt, TextType.IMAGE, image_link))
             temp_node = split_node[1]
 
-            if len(temp_node) == 1:
-                sub_nodes.append(TextNode(temp_node[0], TextType.TEXT))
+        if temp_node != "":
+            new_nodes.append(TextNode(temp_node, TextType.TEXT))
 
-        new_nodes.extend(sub_nodes)
     return new_nodes
 
 
@@ -109,20 +94,8 @@ def split_nodes_link(old_nodes):
             continue
         links = extract_markdown_links(old_node.text)
 
-        sub_nodes = []
-
-        if len(links) == 1:
-            image_alt, image_link = links[0]
-            split_node = old_node.text.split(f"[{image_alt}]({image_link})", 1)
-            for i in range(len(split_node)):
-                if split_node[i] == "":
-                    continue
-                if i % 2 == 0:
-                    sub_nodes.append(TextNode(split_node[i], TextType.TEXT))
-                else:
-                    sub_nodes.append(TextNode(image_alt, TextType.LINK, image_link))
-                    sub_nodes.append(TextNode(split_node[i], TextType.TEXT))
-            new_nodes.extend(sub_nodes)
+        if len(links) == 0:
+            new_nodes.append(old_node)
             continue
 
         temp_node = old_node.text
@@ -130,17 +103,27 @@ def split_nodes_link(old_nodes):
             image_alt, image_link = link
             split_node = temp_node.split(f"[{image_alt}]({image_link})", 1)
 
-            if split_node[0] == "":
-                temp_node = split_node[1]
-                sub_nodes.append(TextNode(image_alt, TextType.LINK, image_link))
-                continue
+            if len(split_node) != 2:
+                raise ValueError("invalid markdown")
 
-            sub_nodes.append(TextNode(split_node[0], TextType.TEXT))
-            sub_nodes.append(TextNode(image_alt, TextType.LINK, image_link))
+            if split_node[0] != "":
+                new_nodes.append(TextNode(split_node[0], TextType.TEXT))
+            new_nodes.append(TextNode(image_alt, TextType.LINK, image_link))
             temp_node = split_node[1]
 
-            if len(temp_node) == 1:
-                sub_nodes.append(TextNode(temp_node[0], TextType.TEXT))
+        if temp_node != "":
+            new_nodes.append(TextNode(temp_node, TextType.TEXT))
 
-        new_nodes.extend(sub_nodes)
+    return new_nodes
+
+
+def text_to_textnodes(text):
+    node = TextNode(text, TextType.TEXT)
+
+    new_nodes = split_nodes_delimiter([node], "**", TextType.BOLD)
+    new_nodes = split_nodes_delimiter(new_nodes, "_", TextType.ITALIC)
+    new_nodes = split_nodes_delimiter(new_nodes, "`", TextType.CODE)
+    new_nodes = split_nodes_image(new_nodes)
+    new_nodes = split_nodes_link(new_nodes)
+
     return new_nodes
