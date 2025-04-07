@@ -14,7 +14,7 @@ def split_nodes_delimiter(old_nodes, delimiter, text_type):
         split_node = old_node.text.split(delimiter)
 
         if len(split_node) % 2 == 0:
-            raise ValueError("this is not valid markdown systax")
+            raise ValueError("this is not valid markdown syntax")
 
         for i in range(len(split_node)):
             if split_node[i] == "":
